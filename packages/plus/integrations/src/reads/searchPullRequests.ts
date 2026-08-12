@@ -1,4 +1,5 @@
 import type { PullRequestSearchCriteria, PullRequestShape } from '@gitlens/git/models/pullRequest.js';
+import { defaultPullRequestSort } from '@gitlens/git/models/pullRequest.js';
 import type { IntegrationIds } from '../constants.js';
 import type { ProviderReposInput } from '../providers/models.js';
 import type { ProviderPagedResult, ProviderWarning } from '../results.js';
@@ -183,7 +184,13 @@ export async function searchPullRequestsPage(
 	const truncated = continuation.truncated;
 	if (truncated && warnings.length === 0) {
 		warnings.push(
-			pullRequestSearchCapResultWarning(options.providerId, domain, options.connectionId, totalCount) ??
+			pullRequestSearchCapResultWarning(
+				options.providerId,
+				domain,
+				options.connectionId,
+				totalCount,
+				options.criteria?.sort ?? defaultPullRequestSort,
+			) ??
 				truncationWarning(options.providerId, domain, options.connectionId, 'Pull request search', 'exhausted'),
 		);
 	}

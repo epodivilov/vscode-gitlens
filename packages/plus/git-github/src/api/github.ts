@@ -21,7 +21,7 @@ import type {
 	PullRequestState,
 	PullRequestStateFilter,
 } from '@gitlens/git/models/pullRequest.js';
-import { PullRequestMergeMethod } from '@gitlens/git/models/pullRequest.js';
+import { defaultPullRequestSort, PullRequestMergeMethod } from '@gitlens/git/models/pullRequest.js';
 import type { Provider } from '@gitlens/git/models/remoteProvider.js';
 import type { RepositoryMetadata } from '@gitlens/git/models/repositoryMetadata.js';
 import type { GitRevisionRange } from '@gitlens/git/models/revision.js';
@@ -29,6 +29,7 @@ import type { GitUser } from '@gitlens/git/models/user.js';
 import type { RepositoryVisibility } from '@gitlens/git/providers/types.js';
 import { getGitHubNoReplyAddressParts } from '@gitlens/git/remotes/github.js';
 import { effectiveIssueSort, getIssueComparator } from '@gitlens/git/utils/issue.utils.js';
+import { getPullRequestComparator } from '@gitlens/git/utils/pullRequest.utils.js';
 import {
 	createRevisionRange,
 	getRevisionRangeParts,
@@ -4395,7 +4396,15 @@ export class GitHubApi {
 					}
 				}
 			}
-			pullRequests.sort((a, b) => b.updatedDate.getTime() - a.updatedDate.getTime());
+			// The PR path re-sorts the merged page rather than trusting the per-facet server order — GitHub's
+			// server-side PR sort has been unreliable (the per-branch path re-sorts for the same reason), and the
+			// union of several facets is unordered regardless. The key was validated against
+			// `githubPullRequestSearchCapabilities.sorts` upstream, so its comparator is always defined for a PR
+			// shape; the guard only guards the unreachable case rather than inventing an order for it.
+			const comparator = getPullRequestComparator(options?.criteria?.sort ?? defaultPullRequestSort);
+			if (comparator != null) {
+				pullRequests.sort(comparator);
+			}
 			const values = [
 				...uniqueBy(
 					pullRequests,
